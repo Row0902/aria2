@@ -1,5 +1,5 @@
 [project]
-name = "aria2"
+name = "aria2-sdk"
 version = "0.1.0"
 description = "The best SDK for aria2 — async JSON-RPC client with WebSocket events and bundled binary"
 readme = "README.md"
@@ -25,7 +25,7 @@ dev = [
 ]
 
 [project.scripts]
-aria2 = "aria2.__main__:main"
+aria2 = "aria2.__main__:main"  # package installed as aria2-sdk, import as aria2
 
 [build-system]
 requires = ["hatchling"]

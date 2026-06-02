@@ -28,7 +28,7 @@
 | 22 | Tests: Client + sub-managers | `tests/test_client.py` | ✅ |
 | 23 | Tests: Errors | `tests/test_errors.py` | ✅ |
 | 24 | CI: lint (ruff) | `.github/workflows/lint.yml` | ✅ |
-| 25 | CI: type-check (ty) | `.github/workflows/lint.yml` | ✅ |
+| 25 | CI: type-check (ty) | `.github/workflows/typecheck.yml` | ✅ |
 | 26 | CI: test (pytest) | `.github/workflows/test.yml` | ✅ |
 | 27 | CI: release to PyPI | `.github/workflows/release.yml` | ✅ |
 
@@ -36,8 +36,8 @@
 
 | # | Task | Notes |
 |---|------|-------|
-| 1 | README.md | Usage docs, API reference, examples |
-| 2 | Integration test fixture | Auto-start aria2c daemon for CI |
-| 3 | Torrent functional test | With actual .torrent URL |
-| 4 | `add_torrent` with web seed URIs | Uncommon parameter combination |
-| 5 | CHANGELOG update | Version history for releases |
+| 1 | README.md | Usage docs, API reference, examples | ✅ |
+| 2 | Integration test fixture | Auto-start aria2c daemon for CI | ✅ |
+| 3 | Torrent functional test | With actual .torrent data | ✅ |
+| 4 | `add_torrent` with web seed URIs | Uncommon parameter combination | ✅ |
+| 5 | CHANGELOG update | Version history for releases | ✅ |

@@ -150,3 +150,87 @@ async def test_connect_refused_raises() -> None:
     t = WebSocketTransport("localhost", 18998, timeout=1.0)
     with pytest.raises(Aria2ConnectionError):
         await t.connect()
+
+
+@pytest.mark.asyncio
+async def test_send_request_no_secret(ws_server: dict[str, Any]) -> None:
+    """Request without secret works (no token injected)."""
+    t = WebSocketTransport("localhost", ws_server["port"], secret="tok", timeout=5.0)
+    await t.connect()
+    try:
+        result = await t.send_request("aria2.addUri", [["http://x"]], add_secret=False)
+        assert result == "mock-gid-abc"
+        # Verify payload does not contain "token:tok"
+        sent = ws_server["received"][0]
+        assert "token:tok" not in sent
+    finally:
+        await t.close()
+
+
+@pytest.mark.asyncio
+async def test_stale_response_ignored(ws_server: dict[str, Any]) -> None:
+    """A response with an unknown ID is silently ignored."""
+
+    received_events: list[tuple[str, list[Any]]] = []
+
+    def on_event(method: str, params: list[Any]) -> None:
+        received_events.append((method, params))
+
+    t = WebSocketTransport(
+        "localhost",
+        ws_server["port"],
+        timeout=5.0,
+        event_callback=on_event,
+    )
+    await t.connect()
+    try:
+        # Send a fake response with unknown ID via the server
+        ws_server["notifications"].append(
+            {"jsonrpc": "2.0", "result": "stale", "id": 999}
+        )
+        result = await t.send_request("aria2.addUri", [["http://x"]])
+        assert result == "mock-gid-abc"
+    finally:
+        await t.close()
+
+
+@pytest.mark.asyncio
+async def test_close_cancels_pending(ws_server: dict[str, Any]) -> None:
+    """Close() cancels pending requests."""
+    t = WebSocketTransport("localhost", ws_server["port"], timeout=5.0)
+    await t.connect()
+    # Manually inject a pending future (simulating a request in flight)
+    fut: asyncio.Future[Any] = asyncio.get_event_loop().create_future()
+    t._pending[999] = fut
+    await t.close()
+    assert fut.done()
+    assert fut.cancelled()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_error_swallowed(ws_server: dict[str, Any]) -> None:
+    """A callback that raises does not crash the reader loop."""
+
+    def on_event(method: str, params: list[Any]) -> None:
+        raise RuntimeError("callback error")
+
+    ws_server["notifications"] = [
+        {
+            "jsonrpc": "2.0",
+            "method": "aria2.onDownloadStart",
+            "params": [{"gid": "abc"}],
+        },
+    ]
+
+    t = WebSocketTransport(
+        "localhost",
+        ws_server["port"],
+        timeout=5.0,
+        event_callback=on_event,
+    )
+    await t.connect()
+    try:
+        result = await t.send_request("aria2.addUri", [["http://x"]])
+        assert result == "mock-gid-abc"
+    finally:
+        await t.close()

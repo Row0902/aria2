@@ -64,6 +64,8 @@ class HttpTransport(Transport):
             raise
         except httpx.HTTPError as e:
             raise Aria2ConnectionError(str(e)) from e
+        except (TimeoutError, OSError) as e:
+            raise Aria2ConnectionError(str(e)) from e
 
     def _build_payload(self, method: str, params: list[Any], add_secret: bool) -> str:
         if add_secret:

@@ -90,3 +90,33 @@ async def test_close(transport: HttpTransport) -> None:
     assert transport.is_connected
     await transport.close()
     assert not transport.is_connected
+
+
+@pytest.mark.asyncio
+async def test_http_timeout_error(transport: HttpTransport) -> None:
+    """Network timeout raises Aria2ConnectionError."""
+    with respx.mock:
+        respx.post(HTTP_URL).mock(side_effect=TimeoutError("connection timed out"))
+        await transport.connect()
+        with pytest.raises(Aria2ConnectionError, match="connection timed out"):
+            await transport.send_request("aria2.addUri", [["http://x"]])
+
+
+@pytest.mark.asyncio
+async def test_send_request_no_secret(transport: HttpTransport) -> None:
+    """Request without secret does not include token in payload."""
+    with respx.mock:
+        route = respx.post(HTTP_URL).respond(
+            status_code=200,
+            content_type="application/json",
+            text=json.dumps({"jsonrpc": "2.0", "result": "ok", "id": 1}),
+        )
+        await transport.connect()
+        result = await transport.send_request(
+            "aria2.addUri", [["http://x"]], add_secret=False
+        )
+    assert result == "ok"
+    assert route.called
+    # Verify payload does NOT contain "token:"
+    sent_text = route.calls[0].request.content.decode() if route.calls else ""
+    assert "token:" not in sent_text

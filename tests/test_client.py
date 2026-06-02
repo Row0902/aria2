@@ -333,3 +333,416 @@ async def test_http_fallback(client: Any) -> None:
     assert len(http.sent) == 1
     assert http.sent[0][0] == "aria2.addUri"
     ws.connect = orig_ws_connect
+
+
+# ── DownloadManager edge cases ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_add_uri_with_position_only(client: Any) -> None:
+    """add_uri with position but no options — hits elif branch."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_uri(["http://x"], position=5)
+    assert ws.sent[0] == ("aria2.addUri", [["http://x"], {}, 5])
+
+
+@pytest.mark.asyncio
+async def test_add_torrent_with_uris(client: Any) -> None:
+    """add_torrent with web seed URIs."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_torrent(b"data", uris=["http://seed"])
+    method, params = ws.sent[0]
+    assert method == "aria2.addTorrent"
+    assert params[1] == ["http://seed"]
+
+
+@pytest.mark.asyncio
+async def test_add_torrent_with_uris_options_position(client: Any) -> None:
+    """add_torrent with all optional parameters."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_torrent(
+        b"data", uris=["http://seed"], options={"dir": "/tmp"}, position=1,
+    )
+    method, params = ws.sent[0]
+    assert method == "aria2.addTorrent"
+    assert params[1] == ["http://seed"]
+    assert params[2] == {"dir": "/tmp"}
+    assert params[3] == 1
+
+
+@pytest.mark.asyncio
+async def test_add_torrent_with_uris_position(client: Any) -> None:
+    """add_torrent with uris + position, no options."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_torrent(b"data", uris=["http://seed"], position=0)
+    method, params = ws.sent[0]
+    assert method == "aria2.addTorrent"
+    # uris branch + elif position → params: [b64, uris, [], position]
+    assert params[2] == []  # empty options placeholder
+    assert params[3] == 0
+
+
+@pytest.mark.asyncio
+async def test_add_torrent_with_options_position(client: Any) -> None:
+    """add_torrent with options + position, no uris."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_torrent(b"data", options={"dir": "/tmp"}, position=1)
+    method, params = ws.sent[0]
+    assert method == "aria2.addTorrent"
+    assert params[1] == {"dir": "/tmp"}
+    assert params[2] == 1
+
+
+@pytest.mark.asyncio
+async def test_add_torrent_with_position_only(client: Any) -> None:
+    """add_torrent with position, no uris, no options."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_torrent(b"data", position=2)
+    method, params = ws.sent[0]
+    assert method == "aria2.addTorrent"
+    assert params[1] == 2
+
+
+@pytest.mark.asyncio
+async def test_add_metalink_with_position_only(client: Any) -> None:
+    """add_metalink with position but no options."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_metalink(b"metal", position=0)
+    method, params = ws.sent[0]
+    assert method == "aria2.addMetalink"
+    assert params[1] == 0
+
+
+@pytest.mark.asyncio
+async def test_add_metalink_with_options_position(client: Any) -> None:
+    """add_metalink with options + position."""
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.add_metalink(b"metal", options={"dir": "/tmp"}, position=1)
+    method, params = ws.sent[0]
+    assert method == "aria2.addMetalink"
+    assert params[1] == {"dir": "/tmp"}
+    assert params[2] == 1
+
+
+# ── OptionsManager tests ──────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_option(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = {"max-connection-per-server": "4"}
+    await c.connect()
+    result = await c.options.get_option("abc")
+    assert result["max-connection-per-server"] == "4"
+    assert ws.sent[0] == ("aria2.getOption", ["abc"])
+
+
+@pytest.mark.asyncio
+async def test_change_option(client: Any) -> None:
+    c, http, ws = client
+    await c.connect()
+    await c.options.change_option("abc", {"max-connection-per-server": "8"})
+    assert ws.sent[0] == ("aria2.changeOption", ["abc", {"max-connection-per-server": "8"}])
+
+
+@pytest.mark.asyncio
+async def test_get_global_option(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = {"max-concurrent-downloads": "5"}
+    await c.connect()
+    result = await c.options.get_global_option()
+    assert result["max-concurrent-downloads"] == "5"
+    assert ws.sent[0] == ("aria2.getGlobalOption", [])
+
+
+@pytest.mark.asyncio
+async def test_change_global_option(client: Any) -> None:
+    c, http, ws = client
+    await c.connect()
+    await c.options.change_global_option({"max-concurrent-downloads": "3"})
+    assert ws.sent[0] == ("aria2.changeGlobalOption", [{"max-concurrent-downloads": "3"}])
+
+
+# ── StatusManager edge cases ──────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tell_active_with_keys(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = []
+    await c.connect()
+    result = await c.status.tell_active(keys=["gid", "status"])
+    assert ws.sent[0] == ("aria2.tellActive", [["gid", "status"]])
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_tell_waiting_with_keys(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = []
+    await c.connect()
+    result = await c.status.tell_waiting(5, 10, keys=["gid"])
+    assert ws.sent[0] == ("aria2.tellWaiting", [5, 10, ["gid"]])
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_tell_stopped(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = []
+    await c.connect()
+    result = await c.status.tell_stopped(0, 50)
+    assert ws.sent[0] == ("aria2.tellStopped", [0, 50])
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_tell_stopped_with_keys(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = []
+    await c.connect()
+    result = await c.status.tell_stopped(0, 50, keys=["gid"])
+    assert ws.sent[0] == ("aria2.tellStopped", [0, 50, ["gid"]])
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_uris(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = [{"uri": "http://x", "status": "used"}]
+    await c.connect()
+    result = await c.status.get_uris("abc")
+    assert result[0].uri == "http://x"
+    assert ws.sent[0] == ("aria2.getUris", ["abc"])
+
+
+@pytest.mark.asyncio
+async def test_get_servers(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = [{"index": "1", "servers": []}]
+    await c.connect()
+    result = await c.status.get_servers("abc")
+    assert len(result) == 1
+    assert ws.sent[0] == ("aria2.getServers", ["abc"])
+
+
+@pytest.mark.asyncio
+async def test_get_peers(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = [{"peerId": "-ABC-", "ip": "1.2.3.4", "port": "6881"}]
+    await c.connect()
+    result = await c.status.get_peers("abc")
+    assert result[0].ip == "1.2.3.4"
+    assert ws.sent[0] == ("aria2.getPeers", ["abc"])
+
+
+# ── DownloadManager control edge cases ────────────────────
+
+
+@pytest.mark.asyncio
+async def test_unpause(client: Any) -> None:
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.unpause("abc")
+    assert ws.sent[0] == ("aria2.unpause", ["abc"])
+
+
+@pytest.mark.asyncio
+async def test_unpause_all(client: Any) -> None:
+    c, http, ws = client
+    await c.connect()
+    await c.downloads.unpause_all()
+    assert ws.sent[0] == ("aria2.unpauseAll", [])
+
+
+# ── SystemManager edge cases ──────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_session_info(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = {"sessionId": "sess-001"}
+    await c.connect()
+    result = await c.system.get_session_info()
+    assert result["sessionId"] == "sess-001"
+    assert ws.sent[0] == ("aria2.getSessionInfo", [])
+
+
+@pytest.mark.asyncio
+async def test_list_notifications(client: Any) -> None:
+    c, http, ws = client
+    ws._next_result = ["aria2.onDownloadStart", "aria2.onDownloadComplete"]
+    await c.connect()
+    result = await c.system.list_notifications()
+    # list_notifications strips the "aria2." prefix
+    assert "onDownloadStart" in result
+    assert "onDownloadComplete" in result
+    assert ws.sent[0] == ("system.listNotifications", [])
+
+
+@pytest.mark.asyncio
+async def test_purge_download_result(client: Any) -> None:
+    c, http, ws = client
+    await c.connect()
+    await c.system.purge_download_result()
+    assert ws.sent[0] == ("aria2.purgeDownloadResult", [])
+
+
+@pytest.mark.asyncio
+async def test_remove_download_result(client: Any) -> None:
+    c, http, ws = client
+    await c.connect()
+    await c.system.remove_download_result("abc")
+    assert ws.sent[0] == ("aria2.removeDownloadResult", ["abc"])
+
+
+# ── EventManager edge cases ───────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_event_callbacks_all_types(client: Any) -> None:
+    c, http, ws = client
+    events: list[str] = []
+
+    c.events.on_download_pause(lambda gid=None: events.append("pause"))
+    c.events.on_download_stop(lambda gid=None: events.append("stop"))
+    c.events.on_bt_download_complete(lambda gid=None: events.append("bt_complete"))
+
+    c._on_event("aria2.onDownloadPause", [])
+    c._on_event("aria2.onDownloadStop", [])
+    c._on_event("aria2.onBtDownloadComplete", [])
+
+    assert events == ["pause", "stop", "bt_complete"]
+
+
+@pytest.mark.asyncio
+async def test_event_unknown_method_ignored(client: Any) -> None:
+    """Unknown event methods are silently ignored."""
+    c, http, ws = client
+    events: list[str] = []
+    c.events.on_download_start(lambda gid=None: events.append("start"))
+    c._on_event("aria2.onUnknownEvent", [])
+    assert events == []
+
+
+# ── Base model properties ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_progress_pct_zero_division(client: Any) -> None:
+    """progress_pct returns 0 when total_length is 0."""
+    c, http, ws = client
+    ws._next_result = {
+        "gid": "abc",
+        "status": "active",
+        "totalLength": "0",
+        "completedLength": "0",
+        "downloadSpeed": "0",
+        "uploadSpeed": "0",
+    }
+    await c.connect()
+    status = await c.status.tell_status("abc")
+    assert status.progress_pct == 0.0
+    assert status.speed_kbps == 0.0
+    # ActiveStatus overrides is_active → True
+    assert status.is_active is True
+    assert status.is_complete is False
+    assert status.is_error is False
+
+
+# ── Client lifecycle edge cases ───────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_context_manager(client: Any) -> None:
+    """Async context manager connects and closes."""
+    c, http, ws = client
+    async with c:
+        assert http.is_connected
+        assert ws.is_connected
+    assert not http.is_connected
+    assert not ws.is_connected
+
+
+@pytest.mark.asyncio
+async def test_enable_ws_false() -> None:
+    """Client with enable_ws=False has no WebSocket transport."""
+    c = Aria2Client(secret=None, enable_ws=False, timeout=1.0)
+    assert c._ws is None
+    async with c:
+        assert c._http.is_connected
+    assert not c._http.is_connected
+
+
+@pytest.mark.asyncio
+async def test_ws_connect_degrades_gracefully() -> None:
+    """When WS connection fails, client degrades to HTTP-only."""
+    c = Aria2Client(host="127.0.0.99", port=18999, secret="x", enable_ws=True, timeout=1.0)
+    await c.connect()
+    assert c._http.is_connected
+    await c.close()
+
+
+# ── Model property edge cases ─────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_progress_pct_non_zero(client: Any) -> None:
+    """progress_pct computes correctly when total_length > 0."""
+    c, http, ws = client
+    ws._next_result = {
+        "gid": "abc",
+        "status": "active",
+        "totalLength": "200",
+        "completedLength": "50",
+        "downloadSpeed": "1024",
+        "uploadSpeed": "512",
+    }
+    await c.connect()
+    status = await c.status.tell_status("abc")
+    assert status.progress_pct == 25.0
+    assert status.speed_kbps == 1.0
+
+
+@pytest.mark.asyncio
+async def test_is_active_false_for_complete(client: Any) -> None:
+    """is_active is False for completed downloads."""
+    c, http, ws = client
+    ws._next_result = {
+        "gid": "abc",
+        "status": "complete",
+        "totalLength": "100",
+        "completedLength": "100",
+        "downloadSpeed": "0",
+        "uploadSpeed": "0",
+    }
+    await c.connect()
+    status = await c.status.tell_status("abc")
+    assert status.is_complete is True
+    assert status.is_active is False
+    assert status.is_error is False
+
+
+@pytest.mark.asyncio
+async def test_status_coercion_enum_value(client: Any) -> None:
+    """Status field is coerced from string to DownloadStatus enum."""
+    c, http, ws = client
+    ws._next_result = {
+        "gid": "abc",
+        "status": "paused",
+        "totalLength": "0",
+        "completedLength": "0",
+        "downloadSpeed": "0",
+        "uploadSpeed": "0",
+    }
+    await c.connect()
+    status = await c.status.tell_status("abc")
+    assert status.status.value == "paused"

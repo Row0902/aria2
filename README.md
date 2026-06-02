@@ -8,8 +8,8 @@ from aria2 import Aria2Client, DownloadStatus
 
 async def main():
     async with Aria2Client(secret="mytoken") as client:
-        gid = await client.add_uri(["https://example.com/file.zip"])
-        status = await client.tell_status(gid)
+        gid = await client.downloads.add_uri(["https://example.com/file.zip"])
+        status = await client.status.tell_status(gid)
         print(f"Progress: {status.progress_pct:.1f}%")
         print(f"Speed: {status.speed_kbps:.0f} KB/s")
 
@@ -22,17 +22,17 @@ asyncio.run(main())
 - 🔌 **Dual transport** — WebSocket primary, HTTP fallback
 - 🔔 **Push events** — download start/pause/stop/complete/error via WebSocket
 - 📦 **Binary bundling** — ships with aria2c (linux x86_64)
-- 🎯 **Full static typing** — pydantic models, StrEnums, type-checked
+- 🎯 **Full static typing** — pydantic models, StrEnums, type-checked via `ty`
 - 🛡️ **Error hierarchy** — `Aria2RpcError`, `Aria2ConnectionError`, etc.
 - 📋 **CLI** — `aria2 start`, `aria2 status`, `aria2 check`
-- 📖 **42 RPC methods** — full aria2 JSON-RPC coverage
+- 🧩 **Sub-manager API** — <10 public methods per class (downloads, status, options, system, events)
 
 ## Quickstart
 
 ### Install
 
 ```bash
-pip install aria2
+pip install aria2-sdk
 ```
 
 Requires Python ≥3.14. Dependencies: `httpx`, `pydantic`, `websockets`.
@@ -46,18 +46,26 @@ from aria2 import Aria2Client
 async def main():
     async with Aria2Client(host="localhost", port=6800, secret="mytoken") as c:
         # Add a download
-        gid = await c.add_uri(["https://example.com/video.mp4"])
+        gid = await c.downloads.add_uri(["https://example.com/video.mp4"])
 
         # Check status
-        status = await c.tell_status(gid)
+        status = await c.status.tell_status(gid)
         print(f"Status: {status.status}")
         print(f"Progress: {status.progress_pct:.1f}%")
         print(f"Speed: {status.speed_kbps:.0f} KB/s")
 
         # Control
-        await c.pause(gid)
-        await c.unpause(gid)
-        await c.remove(gid, force=True)
+        await c.downloads.pause(gid)
+        await c.downloads.unpause(gid)
+        await c.downloads.remove(gid, force=True)
+
+        # Global stats
+        stat = await c.status.get_global_stat()
+        print(f"Global speed: {stat.download_speed_kbps:.0f} KB/s")
+
+        # System info
+        version = await c.system.get_version()
+        print(f"aria2 version: {version.version}")
 
 asyncio.run(main())
 ```
@@ -65,6 +73,8 @@ asyncio.run(main())
 ### Event callbacks (WebSocket)
 
 ```python
+from aria2 import Aria2Client
+
 def on_start(gid: str) -> None:
     print(f"Download started: {gid}")
 
@@ -72,9 +82,9 @@ def on_complete(gid: str) -> None:
     print(f"Download complete: {gid}")
 
 async with Aria2Client(secret="mytoken") as client:
-    client.on_download_start(on_start)
-    client.on_download_complete(on_complete)
-    gid = await client.add_uri(["https://example.com/file.zip"])
+    client.events.on_download_start(on_start)
+    client.events.on_download_complete(on_complete)
+    gid = await client.downloads.add_uri(["https://example.com/file.zip"])
     await asyncio.sleep(10)
 ```
 
@@ -107,79 +117,86 @@ Aria2Client(
 )
 ```
 
-### Methods
+### Sub-managers
 
-**Download addition**
+All domain operations are grouped into 5 sub-managers, each with ≤10 public methods:
 
-| Method | RPC |
-|--------|-----|
-| `add_uri(uris, options?, position?)` | `aria2.addUri` |
-| `add_torrent(torrent, uris?, options?, position?)` | `aria2.addTorrent` |
-| `add_metalink(metalink, options?, position?)` | `aria2.addMetalink` |
+| Manager | Property | Methods | Description |
+|---------|----------|---------|-------------|
+| `DownloadManager` | `client.downloads` | 9 | Add, remove, pause, control downloads |
+| `StatusManager` | `client.status` | 9 | Query download status, files, peers |
+| `OptionsManager` | `client.options` | 4 | Get/set per-download and global options |
+| `SystemManager` | `client.system` | 9 | Daemon version, session, shutdown |
+| `EventManager` | `client.events` | 6 | Register WebSocket event callbacks |
 
-**Download control**
-
-| Method | RPC |
-|--------|-----|
-| `remove(gid, force=False)` | `aria2.remove` / `aria2.forceRemove` |
-| `pause(gid, force=False)` | `aria2.pause` / `aria2.forcePause` |
-| `pause_all(force=False)` | `aria2.pauseAll` / `aria2.forcePauseAll` |
-| `unpause(gid)` | `aria2.unpause` |
-| `unpause_all()` | `aria2.unpauseAll` |
-| `change_position(gid, pos, how)` | `aria2.changePosition` |
-
-**Status retrieval**
-
-| Method | Returns |
-|--------|---------|
-| `tell_status(gid, keys?)` | `DownloadStatusResponse` |
-| `tell_active(keys?)` | `list[DownloadStatusResponse]` |
-| `tell_waiting(offset, num, keys?)` | `list[DownloadStatusResponse]` |
-| `tell_stopped(offset, num, keys?)` | `list[DownloadStatusResponse]` |
-| `get_files(gid)` | `list[FileInfo]` |
-| `get_uris(gid)` | `list[UriInfo]` |
-| `get_servers(gid)` | `list[ServerInfo]` |
-| `get_peers(gid)` | `list[PeerInfo]` |
-| `get_global_stat()` | `GlobalStat` |
-
-**Options**
-
-| Method | RPC |
-|--------|-----|
-| `get_option(gid)` | `aria2.getOption` |
-| `change_option(gid, options)` | `aria2.changeOption` |
-| `get_global_option()` | `aria2.getGlobalOption` |
-| `change_global_option(options)` | `aria2.changeGlobalOption` |
-
-**System**
-
-| Method | Returns |
-|--------|---------|
-| `get_version()` | `Aria2Version` |
-| `get_session_info()` | `dict[str, str]` |
-| `shutdown(force=False)` | `str` |
-| `save_session()` | `str` |
-| `purge_download_result()` | `str` |
-| `remove_download_result(gid)` | `str` |
-| `list_methods()` | `list[str]` |
-| `list_notifications()` | `list[str]` |
-| `multicall(calls)` | `list[Any]` |
-
-### Models (pydantic)
-
-All status methods return pydantic `BaseModel` instances with convenience properties:
+### Downloads
 
 ```python
-status = await client.tell_status(gid)
-status.progress_pct      # float: 0.0–100.0
-status.speed_kbps        # float: download speed in KB/s
+# Add
+gid = await client.downloads.add_uri(["https://example.com/file.zip"])
+gid = await client.downloads.add_torrent(torrent_bytes, uris=["https://..."])
+gids = await client.downloads.add_metalink(metalink_bytes)
+
+# Control
+await client.downloads.remove(gid, force=True)
+await client.downloads.pause(gid)
+await client.downloads.pause_all()
+await client.downloads.unpause(gid)
+await client.downloads.unpause_all()
+await client.downloads.change_position(gid, 1, "POS_CUR")
+```
+
+### Status
+
+```python
+# Single download
+status = await client.status.tell_status(gid)
+status.progress_pct      # float
+status.speed_kbps        # float
 status.is_active         # bool
 status.is_complete       # bool
-status.is_error          # bool
 
-stat = await client.get_global_stat()
-stat.download_speed_kbps # float
-stat.upload_speed_kbps   # float
+# Batches
+active = await client.status.tell_active()
+waiting = await client.status.tell_waiting(offset=0, num=10)
+stopped = await client.status.tell_stopped(offset=0, num=10)
+
+# Details
+files = await client.status.get_files(gid)       # list[FileInfo]
+uris = await client.status.get_uris(gid)         # list[UriInfo]
+servers = await client.status.get_servers(gid)   # list[ServerInfo]
+peers = await client.status.get_peers(gid)       # list[PeerInfo]
+stat = await client.status.get_global_stat()     # GlobalStat
+```
+
+### Options
+
+```python
+opts = await client.options.get_option(gid)           # dict[str, str]
+await client.options.change_option(gid, {"max-connection-per-server": "4"})
+
+global_opts = await client.options.get_global_option()
+await client.options.change_global_option({"max-concurrent-downloads": "5"})
+```
+
+### System
+
+```python
+version = await client.system.get_version()         # Aria2Version
+info = await client.system.get_session_info()       # dict[str, str]
+methods = await client.system.list_methods()        # list[str]
+notifications = await client.system.list_notifications()  # list[str]
+
+await client.system.shutdown()
+await client.system.save_session()
+await client.system.purge_download_result()
+await client.system.remove_download_result(gid)
+
+# Batch RPC calls
+results = await client.system.multicall([
+    {"methodName": "aria2.tellStatus", "params": [gid]},
+    {"methodName": "aria2.getGlobalStat"},
+])
 ```
 
 ### Errors
@@ -188,11 +205,42 @@ stat.upload_speed_kbps   # float
 from aria2 import Aria2Error, Aria2ConnectionError, Aria2RpcError
 
 try:
-    await client.tell_status("invalid-gid")
+    status = await client.status.tell_status("invalid-gid")
 except Aria2RpcError as e:
     print(f"RPC error [{e.code}]: {e.message}")
 except Aria2ConnectionError:
     print("Cannot connect to aria2")
+```
+
+### Models (pydantic)
+
+All status methods return pydantic `BaseModel` instances with typed fields and
+convenience properties:
+
+```python
+status = await client.status.tell_status(gid)
+status.progress_pct      # float: 0.0–100.0
+status.speed_kbps        # float: download speed in KB/s
+status.is_active         # bool
+status.is_complete       # bool
+status.is_error          # bool
+
+stat = await client.status.get_global_stat()
+stat.download_speed_kbps # float
+stat.upload_speed_kbps   # float
+```
+
+Download status responses use a **discriminated union** — each status variant
+(`ActiveStatus`, `PausedStatus`, `ErrorStatus`, `CompleteStatus`, `RemovedStatus`)
+is its own model, selected automatically at parse time:
+
+```python
+status = await client.status.tell_status(gid)
+match status.status:
+    case DownloadStatus.ACTIVE:
+        print(f"Downloading: {status.progress_pct:.1f}%")
+    case DownloadStatus.COMPLETE:
+        print(f"Completed at {status.completed_time}")
 ```
 
 ## CLI
@@ -213,13 +261,12 @@ aria2 start --secret mytoken --daemon
 
 ## Binary bundling
 
-This package can bundle the `aria2c` binary inside the wheel. During build:
+This package can bundle the `aria2c` binary inside the wheel. During build,
+a Hatchling build hook downloads the pre-compiled static binary from
+[abcfy2/aria2-static-build](https://github.com/abcfy2/aria2-static-build)
+for the detected platform.
 
-1. The CI workflow compiles `aria2c` statically
-2. A hatchling build hook downloads the binary from `Row0902/aria2-binaries`
-3. The binary is included in the wheel under `aria2/bin/`
-
-At runtime, the SDK tries:
+At runtime, the SDK discovers the binary by trying:
 1. Bundled binary (wheel install)
 2. System `aria2c` from `PATH`
 
@@ -234,12 +281,10 @@ ver = get_binary_version()     # Release tag (e.g. "release-1.37.0")
 
 ```bash
 # Setup
-uv sync --extra dev
-uv pip install mypy pytest pytest-asyncio respx
+uv sync
 
 # Type checking
 ty check src/aria2/
-mypy src/aria2/
 
 # Lint
 ruff check src tests
@@ -252,17 +297,39 @@ uv run pytest tests/
 
 ```
 src/aria2/
-├── __init__.py          # Public API
-├── __main__.py          # CLI entry point
-├── bin/                 # Binary discovery
-├── client.py            # Aria2Client (42 methods)
-├── errors.py            # Error hierarchy
-├── models.py            # Pydantic models
-├── rpc.py               # JSON-RPC 2.0 protocol
-├── transport/
-│   ├── http.py          # HTTP via httpx
-│   └── ws.py            # WebSocket + events
-└── types.py             # GID, StrEnums
+├── __init__.py           # Public API re-exports
+├── __main__.py           # CLI entry point
+├── py.typed              # PEP 561 marker
+├── bin/
+│   └── __init__.py       # Binary discovery
+├── cli/
+│   └── __init__.py       # CLI commands (start, stop, status)
+├── client/
+│   ├── __init__.py       # Aria2Client lifecycle
+│   ├── download.py       # DownloadManager (9 methods)
+│   ├── status.py         # StatusManager (9 methods)
+│   ├── options.py        # OptionsManager (4 methods)
+│   ├── system.py         # SystemManager (9 methods)
+│   ├── events.py         # EventManager (6 methods)
+│   ├── _helpers.py       # Internal utilities
+│   └── transport/
+│       ├── __init__.py   # Transport ABC
+│       ├── http.py       # HTTP via httpx
+│       └── ws.py         # WebSocket + events
+├── errors/
+│   └── __init__.py       # Error hierarchy
+├── models/
+│   ├── __init__.py       # Re-exports all models
+│   ├── base.py           # _BaseDownloadStatus
+│   ├── download_response.py  # Discriminated union
+│   ├── file.py, uri.py, peer.py, server.py, bittorrent.py
+│   ├── global_stat.py, version.py, session.py
+│   └── status_active.py, status_complete.py, status_error.py,
+│       status_paused.py, status_removed.py
+├── rpc/
+│   └── __init__.py       # JSON-RPC 2.0 protocol
+└── types/
+    └── __init__.py       # GID, DownloadStatus, PositionHow
 ```
 
 ## License
