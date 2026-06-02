@@ -1,0 +1,46 @@
+# .pre-commit-config.yaml — aria2 Python SDK
+# See https://pre-commit.com for more information
+
+default_language_version:
+  python: python3.14
+
+repos:
+  # ── General file hygiene ───────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # ── Ruff: lint + format (Astral) ───────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.15
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # ── ty: type checker (Astral) ──────────────────────────
+  - repo: https://github.com/astral-sh/ty-pre-commit
+    rev: v0.0.42
+    hooks:
+      - id: ty
+        args: [--]
+
+  # ── Local hooks (project-specific) ─────────────────────
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: uv run pytest -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

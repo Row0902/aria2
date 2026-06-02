@@ -1,0 +1,30 @@
+{
+	"subagents": {
+		"agentOverrides": {
+			"context-builder": {
+				"model": "opencode-go/deepseek-v4-flash"
+			},
+			"delegate": {
+				"model": "opencode-go/deepseek-v4-flash"
+			},
+			"oracle": {
+				"model": "opencode-go/deepseek-v4-flash"
+			},
+			"planner": {
+				"model": "opencode-go/deepseek-v4-flash"
+			},
+			"researcher": {
+				"model": "opencode-go/deepseek-v4-flash"
+			},
+			"reviewer": {
+				"model": "opencode-go/kimi-k2.6"
+			},
+			"scout": {
+				"model": "opencode-go/deepseek-v4-flash"
+			},
+			"worker": {
+				"model": "opencode-go/deepseek-v4-flash"
+			}
+		}
+	}
+}

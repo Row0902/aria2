@@ -1,0 +1,11 @@
+name: aria2
+version: "0.1.0"
+description: "Wrapper completo para aria2 en Python 3.14 — cliente JSON-RPC async con WebSocket, tipado estático, manejo de eventos"
+python: ">=3.14"
+build: uv_build
+
+sdd:
+  execution: interactive
+  artifact_store: openspec
+  strict_tdd: false
+  review_budget: 600

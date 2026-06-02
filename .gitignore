@@ -1,0 +1,76 @@
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+*.pyc
+
+# ── Virtual environments ─────────────────────────────
+.venv
+venv/
+.venv/
+env/
+
+# ── Coverage ─────────────────────────────────────────
+.coverage
+.coverage.*
+coverage/
+coverage.xml
+htmlcov/
+*.coverage
+
+# ── Environment ──────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+
+# ── IDE / Editors ───────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.project
+.pydevproject
+*.sublime-*
+
+# ── Logs ─────────────────────────────────────────────
+*.log
+.logs/
+
+# ── OS ───────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ── Project-specific ─────────────────────────────────
+# Local Pi runtime state
+.atl/
+
+# aria2c runtime artifacts (metalinks/torrents saved by RPC)
+*.meta4
+*.torrent
+
+# Downloaded aria2 binaries (cached for build)
+/aria2_bin/
+!/aria2_bin/.gitkeep
+
+# Build artifacts
+*.whl
+*.tar.gz
+dist/
+build/
