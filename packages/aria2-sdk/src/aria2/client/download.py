@@ -2,8 +2,43 @@
 
 from __future__ import annotations
 
+import base64
 from collections.abc import Callable
 from typing import Any
+
+
+def _build_torrent_params(
+    b64: str,
+    uris: list[str] | None,
+    options: dict[str, str] | None,
+    position: int | None,
+) -> list[Any]:
+    """Build RPC params array for aria2.addTorrent."""
+    params: list[Any] = [b64]
+    has_uris = uris is not None
+    if has_uris:
+        params.append(uris)
+    if options is not None:
+        params.append(options)
+    if position is not None:
+        if has_uris and options is None:
+            params.append([])  # placeholder for skipped options slot
+        params.append(position)
+    return params
+
+
+def _build_metalink_params(
+    b64: str,
+    options: dict[str, str] | None,
+    position: int | None,
+) -> list[Any]:
+    """Build RPC params array for ``aria2.addMetalink``."""
+    params: list[Any] = [b64]
+    if options is not None:
+        params.append(options)
+    if position is not None:
+        params.append(position)
+    return params
 
 
 class DownloadManager:
@@ -43,26 +78,8 @@ class DownloadManager:
         position: int | None = None,
     ) -> str:
         """Add a download by torrent file."""
-        import base64
-
         b64 = base64.b64encode(torrent).decode("ascii")
-        params: list[Any] = [b64]
-        if uris is not None:
-            params.append(uris)
-            if options is not None:
-                params.append(options)
-                if position is not None:
-                    params.append(position)
-            elif position is not None:
-                params.append([])
-                params.append(position)
-        else:
-            if options is not None:
-                params.append(options)
-                if position is not None:
-                    params.append(position)
-            elif position is not None:
-                params.append(position)
+        params = _build_torrent_params(b64, uris, options, position)
         return await self._request("aria2.addTorrent", params)
 
     async def add_metalink(
@@ -75,16 +92,8 @@ class DownloadManager:
 
         Returns a list of GIDs — one per file in the Metalink.
         """
-        import base64
-
         b64 = base64.b64encode(metalink).decode("ascii")
-        params: list[Any] = [b64]
-        if options is not None:
-            params.append(options)
-            if position is not None:
-                params.append(position)
-        elif position is not None:
-            params.append(position)
+        params = _build_metalink_params(b64, options, position)
         return await self._request("aria2.addMetalink", params)
 
     # ── Control ─────────────────────────────────────────────

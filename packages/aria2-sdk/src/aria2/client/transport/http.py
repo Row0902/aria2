@@ -54,27 +54,22 @@ class HttpTransport(Transport):
             self._client = httpx.AsyncClient(timeout=timeout)
 
     async def send_request(self, method: str, params: list[Any], *, add_secret: bool = True) -> Any:
-        """Send a JSON-RPC request over HTTP.
-
-        Args:
-            method: JSON-RPC method name (e.g. ``"aria2.addUri"``).
-            params: Parameters for the method.
-            add_secret: If True, prepend ``token:{secret}`` to params.
-
-        Returns:
-            The parsed JSON-RPC result.
-
-        Raises:
-            Aria2ConnectionError: If not connected or the HTTP request fails.
-            Aria2RpcError: If the daemon returns a JSON-RPC error.
-
-        """
+        """Send a JSON-RPC request over HTTP."""
         if not self.is_connected:
             raise Aria2ConnectionError("HTTP transport is not connected")
         self._request_id += 1
         payload = self._build_payload(method, params, add_secret)
+        return await self._do_request(payload)
+
+    def _build_payload(self, method: str, params: list[Any], add_secret: bool) -> str:
+        if add_secret:
+            return _build(method, self._secret, params, request_id=self._request_id)
+        return _build_noauth(method, params, request_id=self._request_id)
+
+    async def _do_request(self, payload: str) -> Any:
+        """Post JSON-RPC payload and return parsed response."""
         try:
-            resp = await self._client.post(  # type: ignore  # guarded by is_connected
+            resp = await self._client.post(  # type: ignore  # guarded by caller
                 self._url, content=payload, headers={"Content-Type": "application/json"}
             )
             if resp.status_code != 200:
@@ -86,11 +81,6 @@ class HttpTransport(Transport):
             raise Aria2ConnectionError(str(e)) from e
         except (TimeoutError, OSError) as e:
             raise Aria2ConnectionError(str(e)) from e
-
-    def _build_payload(self, method: str, params: list[Any], add_secret: bool) -> str:
-        if add_secret:
-            return _build(method, self._secret, params, request_id=self._request_id)
-        return _build_noauth(method, params, request_id=self._request_id)
 
     async def close(self) -> None:
         """Close the HTTP connection and release resources.

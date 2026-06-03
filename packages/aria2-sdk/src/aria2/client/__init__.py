@@ -2,30 +2,6 @@
 
 Connects to a running aria2c instance via its JSON-RPC interface.
 Uses WebSocket as the primary transport with automatic HTTP fallback.
-
-Usage::
-
-    async with Aria2Client(secret="token") as client:
-        gid = await client.downloads.add_uri(["https://example.com/file.zip"])
-        status = await client.status.tell_status(gid)
-        ver = await client.system.get_version()
-
-Event callbacks (WebSocket only)::
-
-    def on_start(gid: str) -> None:
-        print(f"Download started: {gid}")
-
-
-    client.events.on_download_start(on_start)
-
-Sub-managers (each ≤ 10 public methods):
-
-    - :attr:`downloads` — add, remove, pause, control downloads
-    - :attr:`status` — query download status, files, peers
-    - :attr:`options` — get/set per-download and global options
-    - :attr:`system` — daemon version, session, RPC introspection
-    - :attr:`daemon` — daemon lifecycle (shutdown, session, cleanup)
-    - :attr:`events` — WebSocket event callback registration
 """
 
 from __future__ import annotations
@@ -47,14 +23,7 @@ from aria2.errors import Aria2ConnectionError
 class Aria2Client:
     """Async JSON-RPC client for the aria2 download daemon.
 
-    The client is an async context manager.  All domain operations are
-    delegated to sub-managers exposed as properties.
-
-    Usage::
-
-        async with Aria2Client(secret="token") as client:
-            gid = await client.downloads.add_uri(["https://example.com/file.zip"])
-            status = await client.status.tell_status(gid)
+    Delegates domain operations to sub-managers exposed as properties.
     """
 
     def __init__(
@@ -75,13 +44,7 @@ class Aria2Client:
         self._ws = self._init_ws_transport(host, port, secret, timeout, enable_ws)
 
         self._callbacks = {name: [] for name in _EVENT_MAP}
-
-        self._downloads = DownloadManager(self._request, self._secret)
-        self._status = StatusManager(self._request)
-        self._options = OptionsManager(self._request)
-        self._system = SystemManager(self._request)
-        self._daemon = DaemonManager(self._request, self._secret)
-        self._events = EventManager(self._callbacks)
+        self._init_sub_managers()
 
     def _init_ws_transport(
         self, host: str, port: int, secret: str | None, timeout: float, enable: bool
@@ -91,6 +54,15 @@ class Aria2Client:
                 host, port, secret, timeout=timeout, event_callback=self._on_event
             )
         return None
+
+    def _init_sub_managers(self) -> None:
+        """Create sub-manager instances for each API domain."""
+        self._downloads = DownloadManager(self._request, self._secret)
+        self._status = StatusManager(self._request)
+        self._options = OptionsManager(self._request)
+        self._system = SystemManager(self._request)
+        self._daemon = DaemonManager(self._request, self._secret)
+        self._events = EventManager(self._callbacks)
 
     # ── Sub-manager properties ──────────────────────────────
 
