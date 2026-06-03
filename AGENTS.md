@@ -34,6 +34,10 @@ See `.atl/skill-registry.md` for the full index of project-specific skills.
 | `semver` | Semantic Versioning. MAJOR.MINOR.PATCH, pre-release, version bump, conventional commits. | `skills/semver/SKILL.md` |
 | `gh` | GitHub CLI. PRs, issues, releases, workflows, API, repos. | `skills/gh/SKILL.md` |
 
+## Branch Strategy
+
+See [BRANCH-STRATEGY.md](BRANCH-STRATEGY.md) for the git workflow: `main` is stable/prod, `develop` is canary, `feature/*` and `bugfix/*` branch from `develop`.
+
 ## Loading Protocol
 
 When delegating work via subagents, read `.atl/skill-registry.md` and pass exact skill paths under `## Skills to load before work`.

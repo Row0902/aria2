@@ -8,8 +8,8 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-24.04
     permissions:
-      contents: read      # needed for actions/checkout
-      id-token: write     # needed for PyPI trusted publishing
+      contents: read # needed for actions/checkout
+      id-token: write # needed for PyPI trusted publishing
     environment: pypi
     steps:
       - uses: actions/checkout@v4
