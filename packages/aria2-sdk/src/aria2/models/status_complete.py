@@ -13,10 +13,6 @@ class CompleteStatus(_BaseDownloadStatus):
     status: DownloadStatus = DownloadStatus.COMPLETE
     bittorrent: BittorrentInfo | None = None
 
-    @property
-    def is_complete(self) -> bool:
-        return True
-
 
 __all__ = [
     "CompleteStatus",

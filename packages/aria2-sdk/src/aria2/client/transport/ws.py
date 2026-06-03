@@ -13,6 +13,7 @@ from websockets.asyncio.client import connect as ws_connect
 
 from aria2.client.transport import Transport
 from aria2.errors import Aria2ConnectionError
+from aria2.rpc import build_request as _build_noauth
 from aria2.rpc import build_request_with_secret as _build
 from aria2.rpc import parse_notification as _parse_notification
 from aria2.rpc import parse_response as _parse_response
@@ -54,9 +55,19 @@ class WebSocketTransport(Transport):
 
     @property
     def is_connected(self) -> bool:
+        """Return whether the WebSocket connection is open."""
         return self._ws is not None and not self._ws.close_code is not None
 
     async def connect(self) -> None:
+        """Open a WebSocket connection to the aria2 RPC endpoint.
+
+        Starts a background reader task to receive responses and
+        push notifications from the daemon.
+
+        Raises:
+            Aria2ConnectionError: If the WebSocket connection fails.
+
+        """
         url = f"ws://{self._host}:{self._port}/jsonrpc"
         try:
             self._ws = await ws_connect(
@@ -71,6 +82,24 @@ class WebSocketTransport(Transport):
         self._reader_task = asyncio.create_task(self._reader_loop())
 
     async def send_request(self, method: str, params: list[Any], *, add_secret: bool = True) -> Any:
+        """Send a JSON-RPC request over WebSocket.
+
+        Sends the request and waits for the matching response.
+        Push notifications are handled separately by the reader loop
+        and dispatched via the event callback.
+
+        Args:
+            method: JSON-RPC method name (e.g. ``"aria2.addUri"``).
+            params: Parameters for the method.
+            add_secret: If True, prepend ``token:{secret}`` to params.
+
+        Returns:
+            The parsed JSON-RPC result.
+
+        Raises:
+            Aria2ConnectionError: If not connected or the WebSocket fails.
+
+        """
         if not self.is_connected:
             raise Aria2ConnectionError("WebSocket transport is not connected")
 
@@ -79,8 +108,6 @@ class WebSocketTransport(Transport):
         if add_secret:
             payload = _build(method, self._secret, params, request_id=rid)
         else:
-            from aria2.rpc import build_request as _build_noauth
-
             payload = _build_noauth(method, params, request_id=rid)
 
         future: asyncio.Future[Any] = asyncio.get_event_loop().create_future()
@@ -95,6 +122,12 @@ class WebSocketTransport(Transport):
             self._pending.pop(rid, None)
 
     async def close(self) -> None:
+        """Close the WebSocket connection and cancel pending requests.
+
+        Stops the reader task, closes the socket, and cancels any
+        futures still waiting for responses.  Safe to call multiple
+        times — idempotent.
+        """
         self._should_reconnect = False
         if self._reader_task:
             self._reader_task.cancel()
@@ -172,4 +205,3 @@ class WebSocketTransport(Transport):
                 delay = min(delay * 2, self._max_reconnect_delay)
             else:
                 return
-                delay = min(delay * 2, self._max_reconnect_delay)

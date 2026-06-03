@@ -13,10 +13,6 @@ class PausedStatus(_BaseDownloadStatus):
     bitfield: str = ""
     connections: str = "0"
 
-    @property
-    def is_active(self) -> bool:
-        return False
-
 
 __all__ = [
     "PausedStatus",

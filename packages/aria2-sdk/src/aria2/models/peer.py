@@ -20,6 +20,7 @@ class PeerInfo(BaseModel):
 
     @property
     def is_seeder(self) -> bool:
+        """Return whether this peer is acting as a seeder."""
         return self.seeder == "true"
 
 

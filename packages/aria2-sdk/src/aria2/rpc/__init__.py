@@ -57,6 +57,7 @@ def parse_response(data: str) -> Any:
     Raises:
         Aria2RpcError: if the response contains an ``error`` field.
         json.JSONDecodeError: if the response is not valid JSON.
+
     """
     obj: dict[str, Any] = json.loads(data)
     if "error" in obj:
@@ -76,6 +77,7 @@ def parse_notification(data: str) -> tuple[str, list[Any]] | None:
 
     Raises:
         json.JSONDecodeError: if the response is not valid JSON.
+
     """
     obj: dict[str, Any] = json.loads(data)
     # Notifications have no "id" field

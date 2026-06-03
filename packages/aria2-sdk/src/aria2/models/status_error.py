@@ -13,10 +13,6 @@ class ErrorStatus(_BaseDownloadStatus):
     error_code: str = ""
     error_message: str = ""
 
-    @property
-    def is_error(self) -> bool:
-        return True
-
 
 __all__ = [
     "ErrorStatus",

@@ -4,8 +4,23 @@ description: "Wrapper completo para aria2 en Python 3.14 — cliente JSON-RPC as
 python: ">=3.14"
 build: uv_build
 
+quality:
+  strict_types: true
+  strict_docstrings: true
+  strict_polymorphic_validation: true
+  strict_semantic_version: true
+  strict_conventional_commits: true
+  strict_changelog: true
+  strict_no_third_party_leaks: true
+  strict_idempotent_close: true
+  strict_async_only: true
+  strict_coverage: 80
+  strict_deprecation_policy: true
+  strict_no_utils: true
+
 sdd:
   execution: interactive
   artifact_store: openspec
-  strict_tdd: false
-  review_budget: 600
+  chained_pr_strategy: ask-always
+  strict_tdd: true
+  review_budget: 400

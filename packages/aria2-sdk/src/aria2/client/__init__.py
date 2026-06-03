@@ -23,7 +23,8 @@ Sub-managers (each ≤ 10 public methods):
     - :attr:`downloads` — add, remove, pause, control downloads
     - :attr:`status` — query download status, files, peers
     - :attr:`options` — get/set per-download and global options
-    - :attr:`system` — daemon version, session, shutdown
+    - :attr:`system` — daemon version, session, RPC introspection
+    - :attr:`daemon` — daemon lifecycle (shutdown, session, cleanup)
     - :attr:`events` — WebSocket event callback registration
 """
 
@@ -32,24 +33,15 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import Any
 
+from aria2.client.daemon import DaemonManager
 from aria2.client.download import DownloadManager
-from aria2.client.events import EventManager
+from aria2.client.events import _EVENT_MAP, EventManager
 from aria2.client.options import OptionsManager
 from aria2.client.status import StatusManager
 from aria2.client.system import SystemManager
 from aria2.client.transport.http import HttpTransport
 from aria2.client.transport.ws import WebSocketTransport
 from aria2.errors import Aria2ConnectionError
-
-# Event name to method name mapping (without "aria2." prefix)
-_EVENT_MAP: dict[str, str] = {
-    "onDownloadStart": "aria2.onDownloadStart",
-    "onDownloadPause": "aria2.onDownloadPause",
-    "onDownloadStop": "aria2.onDownloadStop",
-    "onDownloadComplete": "aria2.onDownloadComplete",
-    "onDownloadError": "aria2.onDownloadError",
-    "onBtDownloadComplete": "aria2.onBtDownloadComplete",
-}
 
 
 class Aria2Client:
@@ -87,7 +79,8 @@ class Aria2Client:
         self._downloads = DownloadManager(self._request, self._secret)
         self._status = StatusManager(self._request)
         self._options = OptionsManager(self._request)
-        self._system = SystemManager(self._request, self._secret)
+        self._system = SystemManager(self._request)
+        self._daemon = DaemonManager(self._request, self._secret)
         self._events = EventManager(self._callbacks)
 
     def _init_ws_transport(
@@ -118,8 +111,13 @@ class Aria2Client:
 
     @property
     def system(self) -> SystemManager:
-        """Query daemon version, session, and control lifecycle."""
+        """Query daemon version, session, and available RPC methods."""
         return self._system
+
+    @property
+    def daemon(self) -> DaemonManager:
+        """Control daemon lifecycle — shutdown, session, result cleanup."""
+        return self._daemon
 
     @property
     def events(self) -> EventManager:
@@ -171,6 +169,25 @@ class Aria2Client:
         if self._ws is not None and self._ws.is_connected:
             return await self._ws.send_request(method, params, add_secret=add_secret)
         return await self._http.send_request(method, params, add_secret=add_secret)
+
+    # ── Cross-cutting ──────────────────────────────────────────
+
+    async def multicall(self, calls: list[dict[str, Any]]) -> list[Any]:
+        """Execute multiple RPC calls in a single request.
+
+        ``system.multicall`` requires the secret token to be embedded
+        inside *each* sub-call's ``params`` array, not at the top-level
+        request params.
+        """
+        if self._secret:
+            calls = [
+                {
+                    "methodName": call["methodName"],
+                    "params": [f"token:{self._secret}", *call.get("params", [])],
+                }
+                for call in calls
+            ]
+        return await self._request("system.multicall", [calls], add_secret=False)
 
     def _on_event(self, method: str, params: list[Any]) -> None:
         """Dispatch incoming WebSocket notifications to registered callbacks."""

@@ -204,7 +204,7 @@ async def test_get_version(client: Any) -> None:
 async def test_shutdown(client: Any) -> None:
     c, http, ws = client
     await c.connect()
-    await c.system.shutdown()
+    await c.daemon.shutdown()
     assert ws.sent[0] == ("aria2.shutdown", [])
 
 
@@ -212,7 +212,7 @@ async def test_shutdown(client: Any) -> None:
 async def test_shutdown_force(client: Any) -> None:
     c, http, ws = client
     await c.connect()
-    await c.system.shutdown(force=True)
+    await c.daemon.shutdown(force=True)
     assert ws.sent[0] == ("aria2.forceShutdown", [])
 
 
@@ -246,7 +246,7 @@ async def test_multicall(client: Any) -> None:
     c, http, ws = client
     calls = [{"methodName": "aria2.getVersion", "params": []}]
     await c.connect()
-    await c.system.multicall(calls)
+    await c.multicall(calls)
     expected_calls = [
         {"methodName": "aria2.getVersion", "params": ["token:testsecret"]},
     ]
@@ -310,7 +310,7 @@ async def test_get_files(client: Any) -> None:
 async def test_save_session(client: Any) -> None:
     c, http, ws = client
     await c.connect()
-    await c.system.save_session()
+    await c.daemon.save_session()
     assert ws.sent[0] == ("aria2.saveSession", [])
 
 
@@ -364,7 +364,10 @@ async def test_add_torrent_with_uris_options_position(client: Any) -> None:
     c, http, ws = client
     await c.connect()
     await c.downloads.add_torrent(
-        b"data", uris=["http://seed"], options={"dir": "/tmp"}, position=1,
+        b"data",
+        uris=["http://seed"],
+        options={"dir": "/tmp"},
+        position=1,
     )
     method, params = ws.sent[0]
     assert method == "aria2.addTorrent"
@@ -592,7 +595,7 @@ async def test_list_notifications(client: Any) -> None:
 async def test_purge_download_result(client: Any) -> None:
     c, http, ws = client
     await c.connect()
-    await c.system.purge_download_result()
+    await c.daemon.purge_download_result()
     assert ws.sent[0] == ("aria2.purgeDownloadResult", [])
 
 
@@ -600,7 +603,7 @@ async def test_purge_download_result(client: Any) -> None:
 async def test_remove_download_result(client: Any) -> None:
     c, http, ws = client
     await c.connect()
-    await c.system.remove_download_result("abc")
+    await c.daemon.remove_download_result("abc")
     assert ws.sent[0] == ("aria2.removeDownloadResult", ["abc"])
 
 

@@ -20,10 +20,6 @@ class ActiveStatus(_BaseDownloadStatus):
     verified_length: str = "0"
     verify_integrity_pending: str = "false"
 
-    @property
-    def is_active(self) -> bool:
-        return True
-
 
 __all__ = [
     "ActiveStatus",

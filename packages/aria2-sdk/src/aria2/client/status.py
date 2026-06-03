@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from aria2.client._helpers import snake_keys
+from aria2.client._key_utils import snake_keys
 from aria2.models import (
     DownloadStatusResponse,
     FileInfo,

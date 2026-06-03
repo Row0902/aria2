@@ -232,7 +232,7 @@ async def test_get_session_info(integration_client: Aria2Client) -> None:
 
 async def test_multicall(integration_client: Aria2Client) -> None:
     """Batch multiple RPC calls into a single request."""
-    results = await integration_client.system.multicall(
+    results = await integration_client.multicall(
         [
             {"methodName": "aria2.getVersion", "params": []},
             {"methodName": "aria2.listMethods", "params": []},

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from aria2.client._helpers import snake_keys, to_snake_case
+from aria2.client._key_utils import snake_keys, to_snake_case
 from aria2.models.download_response import _parse_status
 from aria2.models.file import FileInfo
 from aria2.models.global_stat import GlobalStat
@@ -13,7 +13,7 @@ from aria2.models.status_paused import PausedStatus
 from aria2.models.status_removed import RemovedStatus
 from aria2.types import DownloadStatus
 
-# ── _helpers ────────────────────────────────────────────────
+# ── _key_utils ────────────────────────────────────────────────
 
 
 class TestHelpers:

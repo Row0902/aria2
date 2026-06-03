@@ -16,7 +16,7 @@ from aria2.models import (
     RemovedStatus,
     UriInfo,
 )
-from aria2.types import GID, DownloadStatus, PositionHow
+from aria2.types import GID, DownloadStatus, PositionHow, StatusType
 
 __all__ = [
     "GID",
@@ -35,5 +35,6 @@ __all__ = [
     "PausedStatus",
     "PositionHow",
     "RemovedStatus",
+    "StatusType",
     "UriInfo",
 ]

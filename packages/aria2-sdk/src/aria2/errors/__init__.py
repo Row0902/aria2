@@ -22,6 +22,7 @@ class Aria2RpcError(Aria2Error):
         code: The JSON-RPC error code.
         message: The error message from the server.
         data: Optional additional error data.
+
     """
 
     def __init__(

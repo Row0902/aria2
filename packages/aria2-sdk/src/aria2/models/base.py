@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from aria2.models.file import FileInfo
-from aria2.types import DownloadStatus
+from aria2.types import DownloadStatus, StatusType
 
 
 class _BaseDownloadStatus(BaseModel):
@@ -42,16 +42,21 @@ class _BaseDownloadStatus(BaseModel):
         return int(self.download_speed) / 1024
 
     @property
+    def status_type(self) -> StatusType:
+        """The :class:`StatusType` derived from this model's ``status`` field."""
+        return StatusType(self.status.value)
+
+    @property
     def is_active(self) -> bool:
-        return False
+        return self.status_type.is_active
 
     @property
     def is_complete(self) -> bool:
-        return False
+        return self.status_type.is_complete
 
     @property
     def is_error(self) -> bool:
-        return False
+        return self.status_type.is_error
 
     @field_validator("status", mode="before")
     @classmethod

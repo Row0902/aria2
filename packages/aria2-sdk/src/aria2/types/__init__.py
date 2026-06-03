@@ -24,6 +24,37 @@ class DownloadStatus(StrEnum):
     REMOVED = "removed"
 
 
+class StatusType(StrEnum):
+    """Status classification with behavioral properties.
+
+    Extends ``DownloadStatus`` with computed flags so that
+    status-checking logic lives in one place rather than being
+    scattered across model subclasses.
+    """
+
+    ACTIVE = "active"
+    WAITING = "waiting"
+    PAUSED = "paused"
+    ERROR = "error"
+    COMPLETE = "complete"
+    REMOVED = "removed"
+
+    @property
+    def is_active(self) -> bool:
+        """Whether this status represents an actively running download."""
+        return self in (StatusType.ACTIVE, StatusType.WAITING)
+
+    @property
+    def is_complete(self) -> bool:
+        """Whether this status represents a completed download."""
+        return self == StatusType.COMPLETE
+
+    @property
+    def is_error(self) -> bool:
+        """Whether this status represents a failed download."""
+        return self == StatusType.ERROR
+
+
 class PositionHow(StrEnum):
     """How to interpret the position argument in ``change_position``."""
 
@@ -39,4 +70,5 @@ __all__ = [
     "GID",
     "DownloadStatus",
     "PositionHow",
+    "StatusType",
 ]

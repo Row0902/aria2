@@ -42,7 +42,11 @@ select = [
   "PERF",
   "PT",
 ]
+extend-select = ["D102", "D401", "D413"]
 ignore = ["TRY003"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
@@ -59,11 +63,7 @@ line-ending = "lf"
 [tool.ty.environment]
 python-version = "3.14"
 python-platform = "linux"
-root = [
-  "packages/aria2-sdk/src",
-  "packages/aria2-bin/src",
-  "apps/cli/src",
-]
+root = ["packages/aria2-sdk/src", "packages/aria2-bin/src", "apps/cli/src"]
 
 [tool.ty.rules]
 invalid-argument-type = "error"

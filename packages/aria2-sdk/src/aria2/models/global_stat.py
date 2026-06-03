@@ -17,10 +17,12 @@ class GlobalStat(BaseModel):
 
     @property
     def download_speed_kbps(self) -> float:
+        """Return the global download speed in kilobytes per second."""
         return int(self.download_speed) / 1024
 
     @property
     def upload_speed_kbps(self) -> float:
+        """Return the global upload speed in kilobytes per second."""
         return int(self.upload_speed) / 1024
 
 

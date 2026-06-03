@@ -41,14 +41,34 @@ class HttpTransport(Transport):
 
     @property
     def is_connected(self) -> bool:
+        """Return whether the HTTP client is active and not closed."""
         return self._client is not None and not self._client.is_closed
 
     async def connect(self) -> None:
+        """Open an HTTP connection to the aria2 RPC endpoint.
+
+        Creates a new ``httpx.AsyncClient`` if one is not already open.
+        """
         if self._client is None or self._client.is_closed:
             timeout = httpx.Timeout(self._timeout)
             self._client = httpx.AsyncClient(timeout=timeout)
 
     async def send_request(self, method: str, params: list[Any], *, add_secret: bool = True) -> Any:
+        """Send a JSON-RPC request over HTTP.
+
+        Args:
+            method: JSON-RPC method name (e.g. ``"aria2.addUri"``).
+            params: Parameters for the method.
+            add_secret: If True, prepend ``token:{secret}`` to params.
+
+        Returns:
+            The parsed JSON-RPC result.
+
+        Raises:
+            Aria2ConnectionError: If not connected or the HTTP request fails.
+            Aria2RpcError: If the daemon returns a JSON-RPC error.
+
+        """
         if not self.is_connected:
             raise Aria2ConnectionError("HTTP transport is not connected")
         self._request_id += 1
@@ -73,5 +93,9 @@ class HttpTransport(Transport):
         return _build_noauth(method, params, request_id=self._request_id)
 
     async def close(self) -> None:
+        """Close the HTTP connection and release resources.
+
+        Safe to call multiple times.  Idempotent.
+        """
         if self._client and not self._client.is_closed:
             await self._client.aclose()
