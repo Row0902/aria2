@@ -62,7 +62,7 @@ available on all variants.
 _status_adapter: Any = TypeAdapter(DownloadStatusResponse)
 
 
-def _parse_status(  # noqa: E501
+def _parse_status(
     data: dict[str, Any],
 ) -> ActiveStatus | PausedStatus | ErrorStatus | CompleteStatus | RemovedStatus:
     """Parse raw download status data into the correct variant."""

@@ -19,6 +19,7 @@ from aria2.models import (
 from aria2.types import GID, DownloadStatus, PositionHow
 
 __all__ = [
+    "GID",
     "ActiveStatus",
     "Aria2Client",
     "Aria2ConnectionError",
@@ -30,7 +31,6 @@ __all__ = [
     "DownloadStatusResponse",
     "ErrorStatus",
     "FileInfo",
-    "GID",
     "GlobalStat",
     "PausedStatus",
     "PositionHow",
