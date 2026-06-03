@@ -16,6 +16,6 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - run: uv sync --locked
-      - run: uv build
-      - run: uv publish
+      - run: uv sync --all-packages --locked
+      - run: uv build --package aria2-sdk
+      - run: uv publish --package aria2-sdk

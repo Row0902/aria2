@@ -1,39 +1,14 @@
-[project]
-name = "aria2-sdk"
-version = "0.1.0"
-description = "The best SDK for aria2 — async JSON-RPC client with WebSocket events and bundled binary"
-readme = "README.md"
-license = "MIT"
-authors = [
-  { name = "Rowell Urbaez Reyes", email = "167712855+Row0902@users.noreply.github.com" },
-]
-keywords = [
-  "aria2",
-  "download",
-  "json-rpc",
-  "async",
-  "sdk",
-  "httpx",
-  "websockets",
-]
-classifiers = [
-  "Development Status :: 4 - Beta",
-  "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: POSIX :: Linux",
-  "Programming Language :: Python :: 3.14",
-  "Programming Language :: Python :: 3 :: Only",
-  "Topic :: Internet :: WWW/HTTP",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-]
-requires-python = ">=3.14"
-dependencies = ["httpx>=0.28.1", "pydantic>=2.13.4", "websockets>=14.2"]
+# Workspace root — virtual workspace (no [project] table)
+[tool.uv.workspace]
+members = ["packages/*", "apps/*"]
 
-[project.urls]
-repository = "https://github.com/Row0902/aria2"
-documentation = "https://github.com/Row0902/aria2#readme"
-changelog = "https://github.com/Row0902/aria2/blob/main/CHANGELOG.md"
-issues = "https://github.com/Row0902/aria2/issues"
+[tool.uv.sources]
+aria2-sdk = { workspace = true }
+aria2-bin = { workspace = true }
+
+# ═══════════════════════════════════════════════════
+# Shared tool configuration — applies to all members
+# ═══════════════════════════════════════════════════
 
 [dependency-groups]
 dev = [
@@ -45,25 +20,6 @@ dev = [
   "ty>=0.0.42",
   "typer>=0.26.5",
 ]
-
-[project.scripts]
-aria2 = "aria2.__main__:main" # package installed as aria2-sdk, import as aria2
-
-[build-system]
-requires = ["hatchling>=1.27,<2"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build]
-include = ["/src", "/aria2_bin/**"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/aria2"]
-
-[tool.hatch.build.targets.wheel.hooks.custom]
-path = "hatch_build.py"
-
-[tool.hatch.build.targets.sdist]
-exclude = ["/aria2_bin/**"]
 
 [tool.ruff]
 target-version = "py314"
@@ -93,7 +49,7 @@ ignore = ["TRY003"]
 "tests/**" = ["D", "ANN", "N802", "N806"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["aria2"]
+known-first-party = ["aria2", "aria2_bin", "cli"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -112,16 +68,21 @@ redundant-cast = "warn"
 unused-awaitable = "error"
 
 [tool.ty.src]
-include = ["src"]
+include = ["packages/aria2-sdk/src", "packages/aria2-bin/src", "apps/cli/src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["tests"]
+testpaths = [
+  "tests",
+  "packages/aria2-sdk/tests",
+  "packages/aria2-bin/tests",
+  "apps/cli/tests",
+]
 filterwarnings = [
-    "error",
-    # ResourceWarning from subprocess GC cleanup is GC-timing dependent and non-deterministic
-    'ignore::ResourceWarning',
+  "error",
+  # ResourceWarning from subprocess GC cleanup is GC-timing dependent and non-deterministic
+  'ignore::ResourceWarning',
 ]
 log_cli = true
 log_cli_level = "INFO"
@@ -132,8 +93,13 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src"]
-omit = ["src/aria2/bin/*", "**/__main__.py"]
+source = [
+  "packages/aria2-sdk/src",
+  "packages/aria2-bin/src",
+  "apps/cli/src",
+  "tests",
+]
+omit = ["**/__main__.py", "**/aria2_bin/*"]
 branch = true
 
 [tool.coverage.report]

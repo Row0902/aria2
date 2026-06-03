@@ -15,5 +15,5 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - run: uv sync --locked
-      - run: uv run ty check src/ --output-format github
+      - run: uv sync --all-packages --locked
+      - run: uv run ty check packages/ apps/ tests/ --output-format github

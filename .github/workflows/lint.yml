@@ -15,6 +15,6 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - run: uv sync --locked
-      - run: uv run ruff check src/ --output-format github
-      - run: uv run ruff format --check src/ --quiet
+      - run: uv sync --all-packages --locked
+      - run: uv run ruff check packages/ apps/ tests/ --output-format github
+      - run: uv run ruff format --check packages/ apps/ tests/ --quiet

@@ -156,8 +156,8 @@ class Aria2BinaryHook(BuildHookInterface):
             print(f"  ✓ Using cached {binary_path}")
 
         force_include = build_data.setdefault("force_include", {})
-        force_include[str(binary_path)] = f"aria2/bin/{canonical_name}"
+        force_include[str(binary_path)] = f"aria2_bin/{canonical_name}"
 
         version_path = cache_dir / "VERSION"
         version_path.write_text(tag)
-        force_include[str(version_path)] = "aria2/bin/VERSION"
+        force_include[str(version_path)] = "aria2_bin/VERSION"

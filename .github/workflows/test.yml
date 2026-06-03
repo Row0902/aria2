@@ -15,8 +15,8 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - run: uv sync --locked
-      - run: uv run pytest -v -q --cov=src/aria2 --cov-report=term-missing --cov-report=xml
+      - run: uv sync --all-packages --locked
+      - run: uv run pytest -v -q --cov=packages --cov-report=term-missing --cov-report=xml
       - uses: codecov/codecov-action@v5
         with:
           file: ./coverage.xml

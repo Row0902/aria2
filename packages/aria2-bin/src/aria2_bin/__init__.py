@@ -47,7 +47,7 @@ def _find_wheel_binary() -> Path | None:
     import importlib.resources
 
     try:
-        pkg_files = importlib.resources.files("aria2")
+        pkg_files = importlib.resources.files("aria2_bin")
     except ModuleNotFoundError, TypeError:
         return None
 
@@ -57,7 +57,7 @@ def _find_wheel_binary() -> Path | None:
     if artifact is None:
         return None
 
-    candidate = pkg_files / "bin" / artifact
+    candidate = pkg_files / artifact
     # Traversable -> Path via __str__
     p = Path(str(candidate))
     return p if p.exists() else None
@@ -68,10 +68,10 @@ def _find_wheel_version() -> Path | None:
     import importlib.resources
 
     try:
-        pkg_files = importlib.resources.files("aria2")
+        pkg_files = importlib.resources.files("aria2_bin")
     except ModuleNotFoundError, TypeError:
         return None
-    candidate = pkg_files / "bin" / "VERSION"
+    candidate = pkg_files / "VERSION"
     p = Path(str(candidate))
     return p if p.exists() else None
 

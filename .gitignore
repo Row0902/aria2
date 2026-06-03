@@ -68,6 +68,8 @@ Thumbs.db
 # Downloaded aria2 binaries (cached for build)
 /aria2_bin/
 !/aria2_bin/.gitkeep
+packages/aria2-bin/aria2_bin/
+!/packages/aria2-bin/aria2_bin/.gitkeep
 
 # Build artifacts
 *.whl

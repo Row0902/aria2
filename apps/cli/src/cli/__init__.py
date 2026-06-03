@@ -15,7 +15,7 @@ def _find_binary() -> Path:
     """Locate the aria2c binary, bundled or system."""
     # Try bundled first (wheel)
     try:
-        from aria2.bin import get_binary_path
+        from aria2_bin import get_binary_path
 
         return get_binary_path()
     except ImportError, FileNotFoundError:

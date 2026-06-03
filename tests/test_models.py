@@ -216,15 +216,15 @@ class TestStatusVariantFields:
 
 
 class TestMainEntryPoint:
-    def test_main_import(self) -> None:
+    def test_cli_import(self) -> None:
         """Verify the CLI entry point can be imported."""
-        from aria2.cli import main
+        from cli import main
 
         assert main is not None
 
-    def test_main_module(self) -> None:
+    def test_cli_module(self) -> None:
         """Verify __main__ module exists."""
         import importlib
 
-        mod = importlib.import_module("aria2.__main__")
+        mod = importlib.import_module("cli.__main__")
         assert mod is not None

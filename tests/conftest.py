@@ -24,7 +24,7 @@ def anyio_backend() -> str:
 def _find_aria2c() -> Path | None:
     """Locate the aria2c binary (bundled or system)."""
     try:
-        from aria2.bin import get_binary_path
+        from aria2_bin import get_binary_path
 
         return get_binary_path()
     except FileNotFoundError, ImportError:

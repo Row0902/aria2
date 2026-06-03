@@ -6,6 +6,24 @@ resolution-markers = [
     "python_full_version < '3.15'",
 ]
 
+[manifest]
+members = [
+    "aria2-bin",
+    "aria2-cli",
+    "aria2-sdk",
+]
+
+[manifest.dependency-groups]
+dev = [
+    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+    { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "respx", specifier = ">=0.23.1" },
+    { name = "ruff", specifier = ">=0.15.15" },
+    { name = "ty", specifier = ">=0.0.42" },
+    { name = "typer", specifier = ">=0.26.5" },
+]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.4"
@@ -37,24 +55,35 @@ wheels = [
 ]
 
 [[package]]
+name = "aria2-bin"
+version = "0.1.0"
+source = { editable = "packages/aria2-bin" }
+
+[[package]]
+name = "aria2-cli"
+version = "0.1.0"
+source = { editable = "apps/cli" }
+dependencies = [
+    { name = "aria2-bin" },
+    { name = "aria2-sdk" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aria2-bin", editable = "packages/aria2-bin" },
+    { name = "aria2-sdk", editable = "packages/aria2-sdk" },
+    { name = "typer", specifier = ">=0.26.5" },
+]
+
+[[package]]
 name = "aria2-sdk"
 version = "0.1.0"
-source = { editable = "." }
+source = { editable = "packages/aria2-sdk" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "websockets" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "respx" },
-    { name = "ruff" },
-    { name = "ty" },
-    { name = "typer" },
 ]
 
 [package.metadata]
@@ -62,17 +91,6 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "websockets", specifier = ">=14.2" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-asyncio", specifier = ">=1.4.0" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "respx", specifier = ">=0.23.1" },
-    { name = "ruff", specifier = ">=0.15.15" },
-    { name = "ty", specifier = ">=0.0.42" },
-    { name = "typer", specifier = ">=0.26.5" },
 ]
 
 [[package]]
