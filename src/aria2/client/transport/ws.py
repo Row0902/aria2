@@ -168,7 +168,7 @@ class WebSocketTransport(Transport):
                 )
                 # Restart the reader loop
                 await self._reader_loop()
-            except (TimeoutError, OSError):
+            except TimeoutError, OSError:
                 delay = min(delay * 2, self._max_reconnect_delay)
             else:
                 return

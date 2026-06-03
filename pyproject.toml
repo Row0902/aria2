@@ -118,7 +118,11 @@ include = ["src"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    # ResourceWarning from subprocess GC cleanup is GC-timing dependent and non-deterministic
+    'ignore::ResourceWarning',
+]
 log_cli = true
 log_cli_level = "INFO"
 markers = [

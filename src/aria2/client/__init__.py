@@ -15,6 +15,7 @@ Event callbacks (WebSocket only)::
     def on_start(gid: str) -> None:
         print(f"Download started: {gid}")
 
+
     client.events.on_download_start(on_start)
 
 Sub-managers (each ≤ 10 public methods):
