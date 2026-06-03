@@ -8,7 +8,7 @@ via the ``status`` field discriminator.  Use ``DownloadStatusResponse``
 from __future__ import annotations
 
 from aria2.models.bittorrent import BittorrentInfo
-from aria2.models.download_response import (  # noqa: F401 — re-exported for client use
+from aria2.models.download_response import (
     DownloadStatusResponse,
     _parse_status,
 )

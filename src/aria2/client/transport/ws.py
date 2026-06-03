@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any
 
 import websockets
@@ -53,7 +54,7 @@ class WebSocketTransport(Transport):
 
     @property
     def is_connected(self) -> bool:
-        return self._ws is not None and not self._ws.close_code is not None  # noqa: E711
+        return self._ws is not None and not self._ws.close_code is not None
 
     async def connect(self) -> None:
         url = f"ws://{self._host}:{self._port}/jsonrpc"
@@ -97,10 +98,8 @@ class WebSocketTransport(Transport):
         self._should_reconnect = False
         if self._reader_task:
             self._reader_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._reader_task
-            except asyncio.CancelledError:
-                pass
             self._reader_task = None
 
         if self._ws:
@@ -125,10 +124,8 @@ class WebSocketTransport(Transport):
 
         try:
             async for raw in self._ws:
-                try:
-                    self._dispatch(raw)
-                except Exception:
-                    pass  # swallow dispatch errors; keep reading
+                with suppress(Exception):
+                    self._dispatch(raw)  # swallow dispatch errors; keep reading
         except websockets.ConnectionClosed:
             if self._should_reconnect:
                 await self._reconnect()
@@ -171,6 +168,8 @@ class WebSocketTransport(Transport):
                 )
                 # Restart the reader loop
                 await self._reader_loop()
+            except (TimeoutError, OSError):
+                delay = min(delay * 2, self._max_reconnect_delay)
+            else:
                 return
-            except TimeoutError, OSError:
                 delay = min(delay * 2, self._max_reconnect_delay)

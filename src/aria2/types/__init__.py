@@ -36,7 +36,7 @@ class PositionHow(StrEnum):
 
 
 __all__ = [
-    "DownloadStatus",
     "GID",
+    "DownloadStatus",
     "PositionHow",
 ]

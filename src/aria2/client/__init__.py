@@ -28,6 +28,7 @@ Sub-managers (each ≤ 10 public methods):
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Any
 
 from aria2.client.download import DownloadManager
@@ -134,10 +135,8 @@ class Aria2Client:
         """
         await self._http.connect()
         if self._ws is not None:
-            try:
-                await self._ws.connect()
-            except Aria2ConnectionError:
-                pass  # degrade to HTTP
+            with suppress(Aria2ConnectionError):
+                await self._ws.connect()  # degrade to HTTP
 
     async def close(self) -> None:
         """Close all connections."""
