@@ -42,7 +42,7 @@ select = [
   "PERF",
   "PT",
 ]
-extend-select = ["D102", "D401", "D413"]
+extend-select = ["ASYNC", "D102", "D401", "D413"]
 ignore = ["TRY003"]
 
 [tool.ruff.lint.pydocstyle]

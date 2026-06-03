@@ -18,3 +18,5 @@ jobs:
       - run: uv sync --all-packages --locked
       - run: uv run ruff check packages/ apps/ tests/ --output-format github
       - run: uv run ruff format --check packages/ apps/ tests/ --quiet
+      - run: uv run python scripts/lint/wc-lint.py
+      - run: bash scripts/lint/ban-utils.sh

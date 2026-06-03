@@ -26,6 +26,14 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  # ── conventional-pre-commit: conventional commit messages ──
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
+
   # ── ty: type checker (Astral) ──────────────────────────
   - repo: https://github.com/astral-sh/ty-pre-commit
     rev: v0.0.42
@@ -36,9 +44,33 @@ repos:
   # ── Local hooks (project-specific) ─────────────────────
   - repo: local
     hooks:
+      - id: wc-lint
+        name: wc-lint
+        entry: uv run python scripts/lint/wc-lint.py
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+      - id: ban-utils
+        name: ban-utils
+        entry: bash scripts/lint/ban-utils.sh
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+      - id: changelog-lint
+        name: changelog-lint
+        entry: bash scripts/lint/changelog-lint.sh
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
       - id: pytest
         name: pytest
-        entry: uv run pytest -q
+        entry: uv run pytest -q --cov-fail-under=80
         language: system
         types: [python]
         pass_filenames: false

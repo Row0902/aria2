@@ -173,6 +173,37 @@ Zero literal coupling is impossible — components must communicate. The goal is
 - **No** cascading coupling — a change in A does not force changes in B, C, D
 - The weakest connascence type (Name, Type) that gets the job done
 
+#### 12. Strict Single-Responsibility & LoC Thresholds
+
+Enforced by ``wc-lint.py`` in pre-commit and CI.  Each threshold has a
+**review implication** beyond what the tool can check.
+
+- [ ] **File ≤ 200 lines** — every file stays under 200 lines of actual code
+   (comments and docstrings excluded from the spirit of the rule).
+   → **Maneuver**: If a file exceeds this, it likely has multiple concerns.
+     Extract one concern to a new module.
+   → **Critical** at 500 lines — merge blocker.
+- [ ] **Function ≤ 20 lines** — every function/method body stays under 20 lines.
+   → **Maneuver**: Count blank lines + comments + code.  At 15 lines, it's
+     time to extract helper functions.
+   → Exceptions: ``__init__`` with many attribute assignments, ``match``
+     statements with exhaustive arms.
+- [ ] **Class ≤ 10 public methods** — no class exposes more than 10 public
+   methods (non-``_``-prefixed).
+   → **Maneuver**: Count the public methods.  If >10, the class has more
+     than one responsibility — split into sub-managers.
+   → See ``Aria2Client`` as the reference pattern (delegates to
+     ``DownloadManager``, ``StatusManager``, etc.).
+- [ ] **Strict single-responsibility**: every module, class, function,
+   method, and package has exactly one well-defined responsibility.
+   → **Maneuver**: Write a one-sentence purpose for each.  If "and"
+     appears, split.
+   → The tool (``wc-lint``) enforces structural limits.  The reviewer
+     enforces the *semantic* limit — does this unit do ONE thing?
+
+> **Project policy**: All thresholds enforced by ``wc-lint.py`` at pre-commit
+> and CI.  See ``openspec/config.yaml`` ``quality.*``.
+
 ### SDK-Specific Review Areas
 
 #### Transport Layer

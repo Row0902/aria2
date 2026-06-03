@@ -18,6 +18,13 @@ quality:
   strict_deprecation_policy: true
   strict_no_utils: true
 
+  # Lines-of-code strict thresholds
+  strict_single_responsibility: true
+  max_file_lines: 200
+  critical_file_lines: 500
+  max_function_lines: 20
+  max_class_public_methods: 10
+
 sdd:
   execution: interactive
   artifact_store: openspec
