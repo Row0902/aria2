@@ -47,9 +47,7 @@ class TestStatusParsing:
     """Test _parse_status with each status variant."""
 
     def test_parse_paused_status(self) -> None:
-        result = _parse_status(
-            {"gid": "abc", "status": "paused", "total_length": "1000"}
-        )
+        result = _parse_status({"gid": "abc", "status": "paused", "total_length": "1000"})
         assert isinstance(result, PausedStatus)
         assert result.status == DownloadStatus.PAUSED
 
@@ -68,16 +66,12 @@ class TestStatusParsing:
         assert result.error_message == "test error"
 
     def test_parse_complete_status(self) -> None:
-        result = _parse_status(
-            {"gid": "abc", "status": "complete", "total_length": "100"}
-        )
+        result = _parse_status({"gid": "abc", "status": "complete", "total_length": "100"})
         assert isinstance(result, CompleteStatus)
         assert result.status == DownloadStatus.COMPLETE
 
     def test_parse_removed_status(self) -> None:
-        result = _parse_status(
-            {"gid": "abc", "status": "removed", "total_length": "50"}
-        )
+        result = _parse_status({"gid": "abc", "status": "removed", "total_length": "50"})
         assert isinstance(result, RemovedStatus)
         assert result.status == DownloadStatus.REMOVED
 
@@ -200,15 +194,11 @@ class TestStatusVariantFields:
         assert e.error_message == "timeout"
 
     def test_paused_status_fields(self) -> None:
-        p = PausedStatus.model_validate(
-            {"gid": "abc", "status": "paused", "total_length": "100"}
-        )
+        p = PausedStatus.model_validate({"gid": "abc", "status": "paused", "total_length": "100"})
         assert p.status == DownloadStatus.PAUSED
 
     def test_removed_status_fields(self) -> None:
-        r = RemovedStatus.model_validate(
-            {"gid": "abc", "status": "removed", "total_length": "0"}
-        )
+        r = RemovedStatus.model_validate({"gid": "abc", "status": "removed", "total_length": "0"})
         assert r.status == DownloadStatus.REMOVED
 
 

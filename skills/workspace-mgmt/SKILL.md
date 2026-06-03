@@ -284,6 +284,96 @@ jobs:
       - run: uv run --package ${{ matrix.package }} pytest
 ```
 
+## Type Checking con ty en Workspaces
+
+### Configuración centralizada en root
+
+En un workspace uv, **ty** (el type checker de Astral) se configura desde el root `pyproject.toml` porque:
+- Todos los miembros comparten el mismo `.venv`
+- Las dependencias cruzadas se resuelven por editable installs
+- No hay necesidad de configuraciones jerárquicas
+
+```toml
+# Root pyproject.toml
+[tool.ty.environment]
+python-version = "3.14"
+python-platform = "linux"
+root = [
+  "packages/aria2-sdk/src",
+  "packages/aria2-bin/src",
+  "apps/cli/src",
+]
+
+[tool.ty.src]
+include = [
+  "packages/aria2-sdk/src",
+  "packages/aria2-bin/src",
+  "apps/cli/src",
+  "tests",
+]
+```
+
+`environment.root` le dice a ty dónde buscar módulos first-party. En workspace, todos los `src/` de los miembros deben estar listados.
+
+### Per-directory overrides para tests
+
+```toml
+[[tool.ty.overrides]]
+include = ["tests/**/*.py"]
+[tool.ty.overrides.rules]
+invalid-argument-type = "warn"       # Tests pueden ser menos estrictos
+unused-awaitable = "warn"
+```
+
+### Cómo ty resuelve imports en workspace
+
+Cuando `uv sync --all-packages` instala los miembros en editable mode, cada paquete queda disponible en el `.venv` compartido. ty los encuentra automáticamente porque:
+1. El `.venv` está en la raíz del workspace
+2. ty detecta `.venv/` automáticamente
+3. Los editable installs generan `.pth` files que Python/ty usan para resolver imports
+
+Para verificar que ty encuentra todo:
+
+```bash
+uv run ty check --show-settings  # Muestra la configuración efectiva
+uv run ty check -vv              # Modo verbose: muestra qué archivos chequea
+```
+
+### Comandos útiles
+
+```bash
+# Checkar todo el workspace
+uv run ty check packages/ apps/ tests/
+
+# Checkar solo un miembro
+uv run ty check packages/aria2-sdk/src
+
+# Con --project (útil para LSP)
+uv run ty check --project packages/aria2-sdk
+
+# Omitir tests
+uv run ty check packages/ apps/
+```
+
+### Limitaciones conocidas
+
+- **ty LSP no soporta proyectos anidados completamente** ([#2410](https://github.com/astral-sh/ty/issues/2410)). La configuración del workspace root es la que se usa para todos los archivos.
+- **Workaround VS Code**: usar multi-root workspace con `.code-workspace` apuntando a cada miembro.
+- **Workaround CLI**: `ty check --project <member>` para checkar un miembro con su propia configuración si tiene `[tool.ty]` propio.
+- Para la mayoría de los workspaces uv, una sola config en el root es suficiente.
+
+### Ejemplo: configuración por miembro (alternativa)
+
+Si necesitás reglas diferentes por miembro, agregá `[tool.ty]` en cada `pyproject.toml` del miembro. ty usará la configuración más cercana al archivo que está chequeando:
+
+```toml
+# packages/api/pyproject.toml
+[tool.ty.rules]
+unused-awaitable = "error"  # API strict
+```
+
+Pero esto **no** hereda la config del root — tenés que repetirla en cada miembro. No recomendado a menos que los miembros tengan necesidades muy diferentes.
+
 ## Docker para Monorepos
 
 ### Estrategia: build desde raíz

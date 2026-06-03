@@ -324,7 +324,7 @@ async def test_http_fallback(client: Any) -> None:
     async def _noop() -> None:
         pass
 
-    ws.connect = _noop  # ty: ignore = invalid-assignment
+    ws.connect = _noop  # type: ignore[assignment]
     ws._connected = False
     http._next_result = "http-result"
     await c.connect()

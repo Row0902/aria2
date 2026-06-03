@@ -59,6 +59,11 @@ line-ending = "lf"
 [tool.ty.environment]
 python-version = "3.14"
 python-platform = "linux"
+root = [
+  "packages/aria2-sdk/src",
+  "packages/aria2-bin/src",
+  "apps/cli/src",
+]
 
 [tool.ty.rules]
 invalid-argument-type = "error"
@@ -68,7 +73,18 @@ redundant-cast = "warn"
 unused-awaitable = "error"
 
 [tool.ty.src]
-include = ["packages/aria2-sdk/src", "packages/aria2-bin/src", "apps/cli/src"]
+include = [
+  "packages/aria2-sdk/src",
+  "packages/aria2-bin/src",
+  "apps/cli/src",
+  "tests",
+]
+
+[[tool.ty.overrides]]
+include = ["tests/**/*.py"]
+[tool.ty.overrides.rules]
+invalid-argument-type = "warn"
+unused-awaitable = "warn"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
