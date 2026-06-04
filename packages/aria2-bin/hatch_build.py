@@ -73,33 +73,20 @@ def _detect_platform() -> tuple[str, str]:
 
 
 def _extract_from_zip(zip_path: Path, canonical_name: str) -> Path:
-    """Extract aria2c binary from *zip_path*, then remove the zip.
-
-    Sets the executable bit on Unix platforms.
-
-    Returns:
-        Path to the extracted binary.
-
-    """
+    """Extract aria2c binary, set executable bit, remove zip."""
     inner_name = "aria2c.exe" if canonical_name.endswith(".exe") else "aria2c"
     dest = zip_path.parent / canonical_name
-
     with zipfile.ZipFile(zip_path) as zf:
         try:
             info = zf.getinfo(inner_name)
         except KeyError:
             msg = f"Expected {inner_name!r} not found inside {zip_path.name}"
             raise OSError(msg) from None
-
         with zf.open(info) as src, open(dest, "wb") as dst:
             dst.write(src.read())
-
     zip_path.unlink()
-
     if not canonical_name.endswith(".exe"):
-        _mode = dest.stat().st_mode
-        dest.chmod(_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-
+        dest.chmod(dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     print(f"     \u2713 {canonical_name} ({dest.stat().st_size / 1024:.0f} KB)")
     return dest
 
@@ -169,22 +156,16 @@ class Aria2BinaryHook(BuildHookInterface):
         except OSError:
             print("  \u26a0  Unsupported platform; skipping binary bundling")
             return
-
         cache_dir = Path(self.root) / "aria2_bin"
         cache_dir.mkdir(parents=True, exist_ok=True)
         tag: str = self.config.get("tag", RELEASE_TAG)
-
         try:
-            binary_path = _get_or_download_binary(
-                zip_asset, canonical_name, cache_dir, tag=tag,
-            )
+            binary_path = _get_or_download_binary(zip_asset, canonical_name, cache_dir, tag=tag)
         except OSError:
             print("  \u26a0  Binary fetch failed; continuing without bundling")
             return
-
         force_include = build_data.setdefault("force_include", {})
         force_include[str(binary_path)] = f"aria2_bin/{canonical_name}"
-
         version_path = cache_dir / "VERSION"
         version_path.write_text(tag)
         force_include[str(version_path)] = "aria2_bin/VERSION"
