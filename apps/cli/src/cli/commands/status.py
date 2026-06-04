@@ -2,47 +2,61 @@
 
 from __future__ import annotations
 
-import argparse
-import sys
+import asyncio
+from typing import Annotated
+
+import typer
 
 from ..config import _fmt_speed
 
+app = typer.Typer()
 
-async def cmd_status(args: argparse.Namespace) -> None:
+
+@app.command()
+def status(
+    host: Annotated[str, typer.Option("--host")] = "localhost",
+    port: Annotated[int, typer.Option("--port", "-p", min=1024, max=65535)] = 6800,
+    secret: Annotated[str | None, typer.Option("--secret", "-s")] = None,
+) -> None:
     """Query a running aria2 daemon for version and stats."""
+    asyncio.run(_status_impl(host, port, secret))
+
+
+async def _status_impl(host: str, port: int, secret: str | None) -> None:
+    """Async implementation of the status command."""
     try:
         from aria2 import Aria2Client  # type: ignore[import-untyped]
     except ImportError:
-        sys.exit("aria2 SDK not installed")
-
+        typer.echo("aria2 SDK not installed", err=True)
+        raise typer.Exit(code=1) from None
     try:
-        async with Aria2Client(
-            host=args.host, port=args.port, secret=args.secret, timeout=5.0
-        ) as client:
+        async with Aria2Client(host=host, port=port, secret=secret, timeout=5.0) as client:
             version = await client.system.get_version()
             _print_version_info(version)
             await _try_print_global_stats(client)
     except ConnectionRefusedError:
-        sys.exit(f"✗ aria2 not running on {args.host}:{args.port}\n  Start it: aria2 start")
+        typer.echo(f"✗ aria2 not running on {host}:{port}\n  Start it: aria2 start", err=True)
+        raise typer.Exit(code=1) from None
     except Exception as e:
-        sys.exit(f"✗ Error: {e}")
+        typer.echo(f"✗ Error: {e}", err=True)
+        raise typer.Exit(code=1) from None
 
 
 def _print_version_info(version: object) -> None:
     """Print aria2 version and enabled features."""
-    print(f"aria2 {version.version}")
-    print(f"  Features: {', '.join(version.enabled_features)}")
+    typer.echo(f"aria2 {version.version}")
+    typer.echo(f"  Features: {', '.join(version.enabled_features)}")
 
 
 async def _try_print_global_stats(client: object) -> None:
     """Print download statistics if supported by the daemon."""
     try:
         stat = await client.status.get_global_stat()
-        print(f"  Downloading: {stat.num_active}")
-        print(f"  Waiting: {stat.num_waiting}")
-        print(f"  Stopped: {stat.num_stopped}")
+        typer.echo(f"  Downloading: {stat.num_active}")
+        typer.echo(f"  Waiting: {stat.num_waiting}")
+        typer.echo(f"  Stopped: {stat.num_stopped}")
         speed_down = int(stat.download_speed)
         speed_up = int(stat.upload_speed)
-        print(f"  Speed: ↓ {_fmt_speed(speed_down)}  ↑ {_fmt_speed(speed_up)}")
+        typer.echo(f"  Speed: ↓ {_fmt_speed(speed_down)}  ↑ {_fmt_speed(speed_up)}")
     except Exception:
         pass  # stat not always supported

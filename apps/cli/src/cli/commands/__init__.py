@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from .start import cmd_start
-from .status import cmd_status
+from .start import app as start_app
+from .status import app as status_app
 
 __all__ = [
-    "cmd_start",
-    "cmd_status",
+    "start_app",
+    "status_app",
 ]
