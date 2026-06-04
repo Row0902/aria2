@@ -92,12 +92,7 @@ def _extract_from_zip(zip_path: Path, canonical_name: str) -> Path:
 
 
 def _download_zip(url: str, dest: Path, timeout: float = 120) -> Path:
-    """Download a zip from *url* and write to *dest*.
-
-    Returns:
-        Path to the downloaded zip.
-
-    """
+    """Download a zip from *url* and write to *dest*."""
     zip_path = dest / Path(url).name
     print(f"  \u2b07  Downloading {url} …")
     req = urllib.request.Request(url, headers={"Accept": "application/octet-stream"})
