@@ -72,19 +72,47 @@ def _detect_platform() -> tuple[str, str]:
     return entry
 
 
-def _download_and_extract_binary(
-    zip_asset: str,
-    canonical_name: str,
-    dest: Path,
-    *,
-    tag: str = RELEASE_TAG,
-    timeout: float = 120,
-) -> None:
-    """Download a release .zip from abcfy2 and extract the ``aria2c`` binary."""
-    url = f"https://github.com/{BINARIES_REPO}/releases/download/{tag}/{zip_asset}"
-    zip_path = dest / zip_asset
+def _extract_from_zip(zip_path: Path, canonical_name: str) -> Path:
+    """Extract aria2c binary from *zip_path*, then remove the zip.
 
-    print(f"  ⬇  Downloading {url} …")
+    Sets the executable bit on Unix platforms.
+
+    Returns:
+        Path to the extracted binary.
+
+    """
+    inner_name = "aria2c.exe" if canonical_name.endswith(".exe") else "aria2c"
+    dest = zip_path.parent / canonical_name
+
+    with zipfile.ZipFile(zip_path) as zf:
+        try:
+            info = zf.getinfo(inner_name)
+        except KeyError:
+            msg = f"Expected {inner_name!r} not found inside {zip_path.name}"
+            raise OSError(msg) from None
+
+        with zf.open(info) as src, open(dest, "wb") as dst:
+            dst.write(src.read())
+
+    zip_path.unlink()
+
+    if not canonical_name.endswith(".exe"):
+        _mode = dest.stat().st_mode
+        dest.chmod(_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    print(f"     \u2713 {canonical_name} ({dest.stat().st_size / 1024:.0f} KB)")
+    return dest
+
+
+def _download_zip(url: str, dest: Path, timeout: float = 120) -> Path:
+    """Download a zip from *url* and write to *dest*.
+
+    Returns:
+        Path to the downloaded zip.
+
+    """
+    zip_path = dest / Path(url).name
+    print(f"  \u2b07  Downloading {url} …")
     req = urllib.request.Request(url, headers={"Accept": "application/octet-stream"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -95,31 +123,38 @@ def _download_and_extract_binary(
             raise OSError(msg) from e
         raise
 
-    print(f"     ✓ {zip_path.name} ({zip_path.stat().st_size / 1024:.0f} KB)")
+    print(f"     \u2713 {zip_path.name} ({zip_path.stat().st_size / 1024:.0f} KB)")
+    return zip_path
 
-    # The zip always contains a file named "aria2c" (or "aria2c.exe" on Windows)
-    inner_name = "aria2c.exe" if canonical_name.endswith(".exe") else "aria2c"
 
-    with zipfile.ZipFile(zip_path) as zf:
-        try:
-            info = zf.getinfo(inner_name)
-        except KeyError:
-            msg = f"Expected {inner_name!r} not found inside {zip_asset}"
-            raise OSError(msg) from None
+def _download_and_extract_binary(
+    zip_asset: str,
+    canonical_name: str,
+    dest: Path,
+    *,
+    tag: str = RELEASE_TAG,
+    timeout: float = 120,
+) -> None:
+    """Download a release .zip and extract the ``aria2c`` binary."""
+    url = f"https://github.com/{BINARIES_REPO}/releases/download/{tag}/{zip_asset}"
+    zip_path = _download_zip(url, dest, timeout=timeout)
+    _extract_from_zip(zip_path, canonical_name)
 
-        binary_path = dest / canonical_name
-        with zf.open(info) as src, open(binary_path, "wb") as dst:
-            dst.write(src.read())
 
-    # Remove the zip — no need to keep it around
-    zip_path.unlink()
-
-    # Make executable on Unix
-    if not canonical_name.endswith(".exe"):
-        _mode = binary_path.stat().st_mode
-        binary_path.chmod(_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-
-    print(f"     ✓ {canonical_name} ({binary_path.stat().st_size / 1024:.0f} KB)")
+def _get_or_download_binary(
+    zip_asset: str,
+    canonical_name: str,
+    cache_dir: Path,
+    tag: str = RELEASE_TAG,
+) -> Path:
+    """Return cached binary path, or download + extract it."""
+    binary_path = cache_dir / canonical_name
+    if binary_path.exists() and binary_path.stat().st_size > 0:
+        print(f"  \u2713 Using cached {binary_path}")
+        return binary_path
+    url = f"https://github.com/{BINARIES_REPO}/releases/download/{tag}/{zip_asset}"
+    zip_path = _download_zip(url, cache_dir)
+    return _extract_from_zip(zip_path, canonical_name)
 
 
 class Aria2BinaryHook(BuildHookInterface):
@@ -132,28 +167,20 @@ class Aria2BinaryHook(BuildHookInterface):
         try:
             zip_asset, canonical_name = _detect_platform()
         except OSError:
-            print("  ⚠  Unsupported platform; skipping binary bundling")
+            print("  \u26a0  Unsupported platform; skipping binary bundling")
             return
 
         cache_dir = Path(self.root) / "aria2_bin"
         cache_dir.mkdir(parents=True, exist_ok=True)
-
-        binary_path = cache_dir / canonical_name
         tag: str = self.config.get("tag", RELEASE_TAG)
 
-        if not (binary_path.exists() and binary_path.stat().st_size > 0):
-            try:
-                _download_and_extract_binary(
-                    zip_asset,
-                    canonical_name,
-                    cache_dir,
-                    tag=tag,
-                )
-            except OSError:
-                print("  ⚠  Binary fetch failed; continuing without bundling")
-                return
-        else:
-            print(f"  ✓ Using cached {binary_path}")
+        try:
+            binary_path = _get_or_download_binary(
+                zip_asset, canonical_name, cache_dir, tag=tag,
+            )
+        except OSError:
+            print("  \u26a0  Binary fetch failed; continuing without bundling")
+            return
 
         force_include = build_data.setdefault("force_include", {})
         force_include[str(binary_path)] = f"aria2_bin/{canonical_name}"
